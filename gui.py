@@ -34,7 +34,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.maxZSB = QtWidgets.QSpinBox(); self.maxZSB.setValue(20); self.maxZSB.setRange(0,120)
         self.minNSB = QtWidgets.QSpinBox(); self.minNSB.setValue(0) ; self.minNSB.setRange(0,300)
         self.maxNSB = QtWidgets.QSpinBox(); self.maxNSB.setValue(20); self.maxNSB.setRange(0,300)
-        self.valCB = QtWidgets.QComboBox(); self.valCB.addItems(["Major Decay", "Stability", "Lifetime", "Binding E"]); self.valCB.setCurrentIndex(0)
+        self.valCB = QtWidgets.QComboBox(); self.valCB.addItems(["Major Decay", "Stability", "Lifetime", "Binding E", "Sn", "Sp"]); self.valCB.setCurrentIndex(0)
         self.fontSizeSB = QtWidgets.QSpinBox(); self.fontSizeSB.setValue(5); self.fontSizeSB.setRange(0,60)
         self.borderWidthSB = QtWidgets.QDoubleSpinBox(); self.borderWidthSB.setValue(0.1); self.borderWidthSB.setRange(0,10); self.borderWidthSB.setSingleStep(0.1)
                 
