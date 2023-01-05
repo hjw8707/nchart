@@ -109,6 +109,9 @@ class NuDB:
             for (k, v) in zip(keys, tempArr):
                 if k == '': continue
                 tempDic[k] = v.strip()
+                if k == 'br':
+                    brs = v.strip().split(';')
+                    tempDic['brs'] = brs
             z = int(tempDic['Z'])
             n = int(tempDic['A']) - z
             if (z, n) in self.dbDic:
@@ -187,16 +190,36 @@ class NuDB:
             return None
 
     def GetLogTime(self, z, n): return math.log10(self.GetTime(z,n))
-
+    def GetStringTime(self, z, n):
+        if (z,n) in self.dbDic:
+            t = self.dbDic[(z,n)]['t']
+            tuni = self.dbDic[(z,n)]['tuni']
+            return t+' '+tuni
+        else:
+            return None        
+        
     def GetMajorDecayChannel(self, z, n): # returning 2n, n, B-, SF, IS, A, B+, EC, p, 2p, 3p
         if (z,n) in self.dbDic:
             br = self.dbDic[(z,n)]['br']
             return re.split('[ =~><]', br)[0]
         else:
             return None
+    def GetDecayChannels(self, z, n): # returning 2n, n, B-, SF, IS, A, B+, EC, p, 2p, 3p
+        if (z,n) in self.dbDic:
+            brs = self.dbDic[(z,n)]['brs']
+            return [re.split('[ =~><]', x)[0] for x in brs]
+        else:
+            return None        
 
     def GetMajorDecayChannelNum(self, z, n):
         return self.DecayChannelConv(self.GetMajorDecayChannel(z,n))
 
     def GetStableOrNotNum(self, z, n):
         return self.DecayChannelStable(self.GetMajorDecayChannel(z,n))
+    
+    
+if __name__=="__main__":
+  nu = NuDB()
+  z=nu.GetDecayChannels(2,4)
+  print(nu.GetStringTime(2,4))
+  
