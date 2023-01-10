@@ -163,6 +163,20 @@ class NuDB:
             else:   return self.dbDic[(z,n)]['A']+self.dbDic[(z,n)]['el']
         return None  
 
+    def GetZN(self, name):
+        nuEl = ["n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Ed", "Fl", "Ef", "Lv", "Eh", "Ei"]
+        p = re.compile('(\d+)([a-zA-Z]+)')
+        m = p.match(name)
+        if m is None: return None
+        a = int(m.group(1))
+        for i, s in zip(range(len(nuEl)),nuEl):
+            if m.group(2).casefold() == s.casefold():
+                z = i
+                break
+        else:
+            return None
+        return (z, a-z)
+
     ############################################################
     def GetBE (self, z, n): return self.GetItem(z, n, 'bind')
     def GetSn (self, z, n): return self.GetItem(z, n, 'sn')

@@ -1,11 +1,10 @@
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches  
 import matplotlib.cm as cm
 import matplotlib.colors as col
 import matplotlib.image as img
 from matplotlib.textpath import TextPath
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.font_manager import FontProperties
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.transforms as trans
 
@@ -23,10 +22,12 @@ cmap2 = LinearSegmentedColormap.from_list('my_cmap2', col2, N=3)
 scalarMap1 = cm.ScalarMappable(col.Normalize(vmin=-4.5, vmax=6.5), cmap=cmap1)
 scalarMap2 = cm.ScalarMappable(col.Normalize(vmin=-1.5, vmax=1.5), cmap=cmap2)
 scalarMap3 = cm.ScalarMappable(col.Normalize(vmin=0, vmax=1), cmap='viridis')
-smaps = [scalarMap1, scalarMap2, scalarMap3, scalarMap3, scalarMap3, scalarMap3]
+scalarMap4 = cm.ScalarMappable(col.Normalize(vmin=0, vmax=1), cmap='binary')
+smaps = [scalarMap1, scalarMap2, scalarMap3, scalarMap3, scalarMap3, scalarMap3, scalarMap4]
 
-def VectorText(ax, x, y, t, size, tcol, ha='center', va='center', rotation=None):
-  path1 = TextPath((0, 0), t, size=size)
+def VectorText(ax, x, y, t, size, tcol, ha='center', va='center', rotation=None, w='normal', f='DejaVu Sans'):
+  fp = FontProperties(family=f, weight=w)
+  path1 = TextPath((0, 0), t, prop=fp, size=size)
   x0, y0 = np.amin(np.array(path1.vertices), axis=0)
   x1, y1 = np.amax(np.array(path1.vertices), axis=0)
   tr2d = trans.Affine2D()
@@ -48,20 +49,27 @@ def VectorText(ax, x, y, t, size, tcol, ha='center', va='center', rotation=None)
 class nchart:
   #############################################
   # input
-  z_min, z_max = 10, 20
-  n_min, n_max = 10, 24
+  z_min, z_max = 0, 20
+  n_min, n_max = 0, 24
 
-  border_width = 0.1
+  border_width = 0.5
   font_size = 0.3
-  
+
   flag_name = True
   flag_value = False
   flag_axis = True
   flag_logo = True
   
   bg_color = '#ffffff'
+
+  border_width_hl = 1
+  border_color_hl = '#000000'
+  font_size_hl = 0.4
+  flag_name_hl = True
+  bg_col_hl = '#ffaaaa'
   
   n_value = 0 
+  # 6 = no color
   # 0 = major decay pattern, 
   # 1 = stable or not (n, p-rich)
   # 2 = lifetime (log)
@@ -70,6 +78,9 @@ class nchart:
   # 5 = Sp
   #############################################
 
+  def Zero(self, z, n): return 0
+  def StrZero(self, z, n): return None
+  
   def __init__(self, fig = 0): # ax should be 'axes' for matplotlib
     ###########################################
     # Load matplotlib
@@ -81,6 +92,8 @@ class nchart:
       self.fig = fig
     ###########################################
     self.nu = NuDB()  # Nuclear DB
+    
+    self.hl = [] # highlight array
 
   def ConvText(self, val):
     s = '%.0e' % val
@@ -97,7 +110,7 @@ class nchart:
   def SetAxis(self):
     self.fig.set_facecolor(self.bg_color)
         
-    self.ax = self.fig.add_axes([0,0,1,1])
+    self.ax = self.fig.add_axes([0,0,1,1], aspect=1)
     self.ax.spines['right'].set_visible(False)
     self.ax.spines['top'].set_visible(False)
     self.ax.yaxis.set_ticks_position('left')
@@ -139,7 +152,6 @@ class nchart:
     self.ax_leg.axis(False)
     self.ax_leg.set_xlim([-1, 7])
     self.ax_leg.set_ylim([7, -1])  
-    print(self.ax_leg.yaxis_inverted())
       
     tcol = 'w' if col.rgb_to_hsv(self.fig.get_facecolor()[:3])[2] < 0.5 else 'k'       
     if self.n_value == 0:
@@ -165,12 +177,12 @@ class nchart:
     if self.flag_axis: self.DrawAxis()
     if self.flag_logo: self.DrawLogo()
     if self.n_value < 2: self.DrawLegend()
-    else:                self.DrawColorBar()
+    elif self.n_value < 6: self.DrawColorBar()
     drawList = []
     drawValue = []
     drawStrValue = []
-    fun_value = [self.nu.GetMajorDecayChannelNum, self.nu.GetStableOrNotNum, self.nu.GetLogTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp]
-    fun_strvalue = [self.nu.GetMajorDecayChannel, self.nu.GetMajorDecayChannel, self.nu.GetStringTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp]
+    fun_value = [self.nu.GetMajorDecayChannelNum, self.nu.GetStableOrNotNum, self.nu.GetLogTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp, self.Zero]
+    fun_strvalue = [self.nu.GetMajorDecayChannel, self.nu.GetMajorDecayChannel, self.nu.GetStringTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp, self.StrZero]
     for z in range(self.z_min,self.z_max+1):
       for n in range(self.n_min,self.n_max+1):
         if self.nu.IsExist(z,n): # and (z,n) in mapData.keys(): 
@@ -200,7 +212,7 @@ class nchart:
     drawValue = np.array(drawValue)
     drawValue = np.where(drawValue == None, np.NaN, drawValue)
     
-    if self.n_value > 1:
+    if self.n_value > 1 and self.n_value < 6:
       max = np.nanmax(drawValue)
       min = np.nanmin(drawValue)
       drawValue = (drawValue[:] - min)/(max - min)
@@ -216,13 +228,38 @@ class nchart:
     for (z, n), c, cs in zip(drawList, drawValue, drawStrValue):
       self.DrawRect(n, z, c, self.nu.GetName(z,n), cs)
 
+    for (z, n) in self.hl:
+      self.DrawHighlights(n, z, self.nu.GetName(z,n))   
+         
     if not self.flagExt:
       plt.show()
       #fig.savefig('output.eps', format='eps')  
       #self.fig.savefig('output.png', format='png')  
+
+  def LoadHighlights(self, file):
+    f = open(file)
+    lines = f.readlines()
+    f.close()
     
+    for i in lines:
+      zn = self.nu.GetZN(i.strip())
+      if zn is not None:
+        self.hl.append((zn[0], zn[1]))
     
+  def ClearHighlights(self): self.hl = []
+
+  def DrawHighlights(self, x, y, t):
+    fcol = col.to_rgba(self.bg_col_hl)
+    tcol = 'w' if col.rgb_to_hsv(fcol[:3])[2] < 0.5 else 'k'
+    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=self.border_color_hl, lw=self.border_width_hl)      
+    self.ax.add_patch(rectangle)
+    if self.flag_name_hl:  
+      VectorText(self.ax, x, y, t, size=self.font_size_hl, tcol=tcol, w='heavy')
+ 
 if __name__=="__main__":
   print("Run the test functions for nchart") 
   nc = nchart()
+  nc.LoadHighlights('hl.txt')
+  nc.flag_name = False
+  nc.n_value = 6
   nc.DrawChart()

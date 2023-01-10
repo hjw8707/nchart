@@ -12,15 +12,11 @@ from matplotlib.figure import Figure
 
 
 class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=5, dpi=100):
+    def __init__(self, parent=None, width=4, height=4, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
-        print(self.fig.get_size_inches())
-        print(self.fig.get_constrained_layout())
-        print(self.fig.get_tight_layout())
         #self.axes = fig.add_subplot(111, frameon = False)
         self.nc = nchart(self.fig)    
         super(MplCanvas, self).__init__(self.fig)
-
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -34,22 +30,32 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create toolbar, passing canvas as first parament, parent (self, the MainWindow) as second.
         toolbar = NavigationToolbar(self.sc, self)
         self.bg_col = QtGui.QColor('#FFFFFF')
-
+        self.hl_border_col = QtGui.QColor('#000000')
+        self.hlfilename = ''
+        
         self.minZSB = QtWidgets.QSpinBox(); self.minZSB.setValue(0) ; self.minZSB.setRange(0,120)
         self.maxZSB = QtWidgets.QSpinBox(); self.maxZSB.setValue(10); self.maxZSB.setRange(0,120)
         self.minNSB = QtWidgets.QSpinBox(); self.minNSB.setValue(0) ; self.minNSB.setRange(0,300)
         self.maxNSB = QtWidgets.QSpinBox(); self.maxNSB.setValue(10); self.maxNSB.setRange(0,300)
-        self.sortCB = QtWidgets.QComboBox(); self.sortCB.addItems(["Major Decay", "Stability", "Lifetime", "Binding E", "Sn", "Sp"]); self.sortCB.setCurrentIndex(0)
+        self.sortCB = QtWidgets.QComboBox(); self.sortCB.addItems(["Major Decay", "Stability", "Lifetime", "Binding E", "Sn", "Sp", "No Color"]); self.sortCB.setCurrentIndex(0)
         self.nameCB = QtWidgets.QCheckBox('names'); self.nameCB.setChecked(True)
         self.valueCB = QtWidgets.QCheckBox('values'); self.valueCB.setChecked(True)
         self.axisCB = QtWidgets.QCheckBox('axis'); self.axisCB.setChecked(True)
         self.logoCB = QtWidgets.QCheckBox('logo'); self.logoCB.setChecked(True)
-        self.fontSizeSB = QtWidgets.QDoubleSpinBox(); self.fontSizeSB.setValue(0.3); self.fontSizeSB.setRange(0,1); self.fontSizeSB.setSingleStep(0.1)
+        self.fontSizeSB = QtWidgets.QDoubleSpinBox(); self.fontSizeSB.setValue(0.3); self.fontSizeSB.setRange(0,1); self.fontSizeSB.setSingleStep(0.05)
         self.colorPB = QtWidgets.QPushButton(); #self.colorPB.setDisabled(True); self.colorPB.setDown(True);#self.colorPB.setFlat(True); 
         self.colorPB.setStyleSheet('QPushButton { background-color: %s; }' % self.bg_col.name())
         self.colorPB.clicked.connect(self.showBGColorDialog)
-        self.borderWidthSB = QtWidgets.QDoubleSpinBox(); self.borderWidthSB.setValue(0.1); self.borderWidthSB.setRange(0,10); self.borderWidthSB.setSingleStep(0.1)
-                
+        self.borderWidthSB = QtWidgets.QDoubleSpinBox(); self.borderWidthSB.setValue(0.5); self.borderWidthSB.setRange(0,10); self.borderWidthSB.setSingleStep(0.1)
+        self.hlfileLE = QtWidgets.QLineEdit(); self.hlfileLE.setModified(False)
+        self.hlfilePB = QtWidgets.QPushButton('Load'); self.hlfilePB.clicked.connect(self.showHLFileDialog)
+        self.hlfileclPB = QtWidgets.QPushButton('Clear'); self.hlfileclPB.clicked.connect(self.hlfileClear)
+        self.hlFontSizeSB = QtWidgets.QDoubleSpinBox(); self.hlFontSizeSB.setValue(0.35); self.hlFontSizeSB.setRange(0,1); self.hlFontSizeSB.setSingleStep(0.05)
+        self.hlBorderWidthSB = QtWidgets.QDoubleSpinBox(); self.hlBorderWidthSB.setValue(1.0); self.hlBorderWidthSB.setRange(0,10); self.hlBorderWidthSB.setSingleStep(0.1)
+        self.hlBorderColorPB = QtWidgets.QPushButton(); self.hlBorderColorPB.setStyleSheet('QPushButton { background-color: %s; }' % self.hl_border_col.name())
+        self.hlBorderColorPB.clicked.connect(self.showHLBorderColorDialog)        
+        
+        
         setLayout1 = QtWidgets.QHBoxLayout()
         setLayout1.addWidget(QtWidgets.QLabel("Min. Z"))
         setLayout1.addWidget(self.minZSB)
@@ -75,16 +81,29 @@ class MainWindow(QtWidgets.QMainWindow):
         setLayout3.addWidget(self.borderWidthSB)
         setLayout3.addWidget(QtWidgets.QLabel("BG Color"))                
         setLayout3.addWidget(self.colorPB)
-                
+              
+        setLayout4 = QtWidgets.QHBoxLayout()
+        setLayout4.addWidget(QtWidgets.QLabel("Highlights"))            
+        setLayout4.addWidget(self.hlfileLE)
+        setLayout4.addWidget(self.hlfilePB)
+        setLayout4.addWidget(self.hlfileclPB)
+        setLayout4.addWidget(QtWidgets.QLabel("Font Size"))            
+        setLayout4.addWidget(self.hlFontSizeSB)
+        setLayout4.addWidget(QtWidgets.QLabel("Border Width"))            
+        setLayout4.addWidget(self.hlBorderWidthSB)        
+        setLayout4.addWidget(QtWidgets.QLabel("Border Color"))                
+        setLayout4.addWidget(self.hlBorderColorPB)
+                          
         setLayout = QtWidgets.QVBoxLayout()
         setLayout.addLayout(setLayout1)
         setLayout.addLayout(setLayout2)
         setLayout.addLayout(setLayout3)
+        setLayout.addLayout(setLayout4)
         
         refButton = QtWidgets.QPushButton("&Refresh", self)
         refButton.clicked.connect(self.refresh)
         exitButton = QtWidgets.QPushButton("E&xit", self)
-        exitButton.clicked.connect(exit)
+        exitButton.clicked.connect(sys.exit())
         
         buttonLayout = QtWidgets.QHBoxLayout()
         buttonLayout.addWidget(refButton)
@@ -123,16 +142,38 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc.nc.border_width = self.borderWidthSB.value()
         self.sc.nc.bg_color = self.bg_col.name(QtGui.QColor.NameFormat.HexRgb)
 
+        if self.hlfilename: self.sc.nc.LoadHighlights(self.hlfilename)
+        else:               self.sc.nc.ClearHighlights()
+            
+        self.sc.nc.border_width_hl = self.hlBorderWidthSB.value()
+        self.sc.nc.font_size_hl = self.hlFontSizeSB.value()
+        self.sc.nc.border_color_hl = self.hl_border_col.name(QtGui.QColor.NameFormat.HexRgb)
+        
         self.sc.nc.DrawChart()
         self.sc.draw()
 
     def showBGColorDialog(self):
-        col = QtWidgets.QColorDialog.getColor()
-
+        col = QtWidgets.QColorDialog.getColor(options = QtWidgets.QColorDialog.ColorDialogOption.ShowAlphaChannel)
         if col.isValid():
             self.bg_col = col
             self.colorPB.setStyleSheet('QPushButton { background-color: %s }' % self.bg_col.name())
+
+    def showHLFileDialog(self):
+        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', './')
+        if fname[0]:
+            self.hlfilename = fname[0]
+            self.hlfileLE.setText(self.hlfilename)
             
+    def hlfileClear(self):
+        self.hlfilename = ''
+        self.hlfileLE.setText(self.hlfilename)
+        
+    def showHLBorderColorDialog(self):
+        col = QtWidgets.QColorDialog.getColor(options = QtWidgets.QColorDialog.ColorDialogOption.ShowAlphaChannel)
+        if col.isValid():
+            self.hl_border_col = col
+            self.hlBorderColorPB.setStyleSheet('QPushButton { background-color: %s }' % self.hl_border_col.name())        
+        
 app = QtWidgets.QApplication(sys.argv)
 w = MainWindow()
 app.exec()
