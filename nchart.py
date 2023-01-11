@@ -67,6 +67,7 @@ class nchart:
   font_size_hl = 0.4
   flag_name_hl = True
   bg_col_hl = '#ffaaaa'
+  bg_alpha_hl = 1
   
   n_value = 0 
   # 6 = no color
@@ -251,7 +252,7 @@ class nchart:
   def DrawHighlights(self, x, y, t):
     fcol = col.to_rgba(self.bg_col_hl)
     tcol = 'w' if col.rgb_to_hsv(fcol[:3])[2] < 0.5 else 'k'
-    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=self.border_color_hl, lw=self.border_width_hl)      
+    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=self.border_color_hl, lw=self.border_width_hl)
     self.ax.add_patch(rectangle)
     if self.flag_name_hl:  
       VectorText(self.ax, x, y, t, size=self.font_size_hl, tcol=tcol, w='heavy')

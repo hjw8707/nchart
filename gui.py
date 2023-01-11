@@ -32,6 +32,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.bg_col = QtGui.QColor('#FFFFFF')
         self.hl_border_col = QtGui.QColor('#000000')
         self.hlfilename = ''
+        self.hl_bg_col = QtGui.QColor('#FFFFFF')
         
         self.minZSB = QtWidgets.QSpinBox(); self.minZSB.setValue(0) ; self.minZSB.setRange(0,120)
         self.maxZSB = QtWidgets.QSpinBox(); self.maxZSB.setValue(10); self.maxZSB.setRange(0,120)
@@ -54,7 +55,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hlBorderWidthSB = QtWidgets.QDoubleSpinBox(); self.hlBorderWidthSB.setValue(1.0); self.hlBorderWidthSB.setRange(0,10); self.hlBorderWidthSB.setSingleStep(0.1)
         self.hlBorderColorPB = QtWidgets.QPushButton(); self.hlBorderColorPB.setStyleSheet('QPushButton { background-color: %s; }' % self.hl_border_col.name())
         self.hlBorderColorPB.clicked.connect(self.showHLBorderColorDialog)        
-        
+        self.hlBGColorPB = QtWidgets.QPushButton(); self.hlBGColorPB.setStyleSheet('QPushButton { background-color: %s; }' % self.hl_bg_col.name())
+        self.hlBGColorPB.clicked.connect(self.showHLBGColorDialog)           
+        self.hlBGAlphaSB = QtWidgets.QDoubleSpinBox(); self.hlBGAlphaSB.setValue(1); self.hlBGAlphaSB.setRange(0,1); self.hlBGAlphaSB.setSingleStep(0.1)
         
         setLayout1 = QtWidgets.QHBoxLayout()
         setLayout1.addWidget(QtWidgets.QLabel("Min. Z"))
@@ -93,6 +96,10 @@ class MainWindow(QtWidgets.QMainWindow):
         setLayout4.addWidget(self.hlBorderWidthSB)        
         setLayout4.addWidget(QtWidgets.QLabel("Border Color"))                
         setLayout4.addWidget(self.hlBorderColorPB)
+        setLayout4.addWidget(QtWidgets.QLabel("Cell Color"))     
+        setLayout4.addWidget(self.hlBGColorPB)
+        setLayout4.addWidget(QtWidgets.QLabel("Opacity")) 
+        setLayout4.addWidget(self.hlBGAlphaSB)
                           
         setLayout = QtWidgets.QVBoxLayout()
         setLayout.addLayout(setLayout1)
@@ -103,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
         refButton = QtWidgets.QPushButton("&Refresh", self)
         refButton.clicked.connect(self.refresh)
         exitButton = QtWidgets.QPushButton("E&xit", self)
-        exitButton.clicked.connect(sys.exit())
+        exitButton.clicked.connect(sys.exit)
         
         buttonLayout = QtWidgets.QHBoxLayout()
         buttonLayout.addWidget(refButton)
@@ -149,11 +156,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc.nc.font_size_hl = self.hlFontSizeSB.value()
         self.sc.nc.border_color_hl = self.hl_border_col.name(QtGui.QColor.NameFormat.HexRgb)
         
+        self.hl_bg_col.setAlphaF(self.hlBGAlphaSB.value())
+        #self.sc.nc.bg_col_hl = self.hl_bg_col.name(QtGui.QColor.NameFormat.HexArgb)
+        self.sc.nc.bg_col_hl = self.hl_bg_col.getRgbF()
+        
+        #self.sc.nc.bg_alpha_hl = 
+        
         self.sc.nc.DrawChart()
         self.sc.draw()
 
     def showBGColorDialog(self):
-        col = QtWidgets.QColorDialog.getColor(options = QtWidgets.QColorDialog.ColorDialogOption.ShowAlphaChannel)
+        col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.bg_col = col
             self.colorPB.setStyleSheet('QPushButton { background-color: %s }' % self.bg_col.name())
@@ -169,10 +182,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hlfileLE.setText(self.hlfilename)
         
     def showHLBorderColorDialog(self):
-        col = QtWidgets.QColorDialog.getColor(options = QtWidgets.QColorDialog.ColorDialogOption.ShowAlphaChannel)
+        col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.hl_border_col = col
             self.hlBorderColorPB.setStyleSheet('QPushButton { background-color: %s }' % self.hl_border_col.name())        
+
+    def showHLBGColorDialog(self):
+        col = QtWidgets.QColorDialog.getColor()
+        if col.isValid():
+            self.hl_bg_col = col
+            self.hlBGColorPB.setStyleSheet('QPushButton { background-color: %s }' % self.hl_bg_col.name())    
         
 app = QtWidgets.QApplication(sys.argv)
 w = MainWindow()
