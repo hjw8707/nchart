@@ -153,14 +153,18 @@ class NuDB:
 
     # DecayChannelStable: conversion the decay channel to the stability 
     def DecayChannelStable(self, x): # return +1 (p-rich), 0: 
-        return {'2n': -1, 'n': -1, 'B-': -1, 'SF': -1, 'IS': 0, 
-                'A': 0, 'B+': 1, 'EC': 1, 'p': 1, '2p':1, '3p':1}.get(x, -20)
+        return {'2n': -1, 'n': -1, 'B-': -1, 'SF': 1, 'IS': 0, 
+                'A': 1, 'B+': 1, 'EC': 1, 'p': 1, '2p':1, '3p':1}.get(x, -20)
     ############################################################
 
     def GetName(self, z, n, sup = True):
+        nuEl = ["n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Ed", "Fl", "Ef", "Lv", "Eh", "Ei"]
         if (z,n) in self.dbDic:
             if sup: return '$^{'+self.dbDic[(z,n)]['A']+'}$'+self.dbDic[(z,n)]['el']
-            else:   return self.dbDic[(z,n)]['A']+self.dbDic[(z,n)]['el']
+            else:   return self.dbDic[(z,n)]['A']+self.dbDic[(z,n)]['el']         
+        elif z >= 0 and z < len(nuEl):
+            if sup: return '$^{'+str(z+n)+'}$'+nuEl[z]
+            else:   return str(z+n)+nuEl[z]            
         return None  
 
     def GetZN(self, name):

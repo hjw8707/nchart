@@ -11,10 +11,11 @@ import matplotlib.transforms as trans
 #mpl.rcParams['pdf.fonttype'] = 42
 import numpy as np
 from nudb import NuDB
+from typing import List
 
 col1 = ['#E725A6','#EA457C','#E39A82', '#75F075', '#333333', '#F0F075', '#75DBF0', '#35E9BC', '#759EF0', '#9475F0', '#B375F0'] 
 leg1 = [r'$2n$', r'$n$', r'$\beta -$', 'Fission', 'Stable', r'$\alpha$', r'$\beta +$', r'$e$-capture', r'$p$', r'$2p$', r'$3p$']
-col2 = ['#EA457C', '#333333','#75DBF0']
+col2 = ['#C6F2FB', '#333333','#FFAEC9']
 leg2 = [r'$n$-rich', 'Stable', r'$p$-rich']
 # returning 2n, n, B-, SF, IS, A, B+, EC, p, 2p, 3p
 cmap1 = LinearSegmentedColormap.from_list('my_cmap1', col1, N=11)
@@ -62,13 +63,19 @@ class nchart:
   
   bg_color = '#ffffff'
 
-  border_width_hl = 1
-  border_color_hl = '#000000'
-  font_size_hl = 0.4
-  flag_name_hl = True
-  bg_col_hl = '#ffaaaa'
-  bg_alpha_hl = 1
+  n_hl = 4
+  bd_wid_hl: List[float] = []
+  bd_col_hl: List[str] = []
+  ft_siz_hl: List[float] = []
+  fl_name_hl: List[bool] = []
+  bg_col_hl: List[str] = []
+  bg_alp_hl: List[float] = []
   
+  border_width_bg = 0
+  border_color_bg = '#000000'
+  bg1_col_bg = '#eeeeee'
+  bg2_col_bg = '#dddddd'
+
   n_value = 0 
   # 6 = no color
   # 0 = major decay pattern, 
@@ -95,6 +102,19 @@ class nchart:
     self.nu = NuDB()  # Nuclear DB
     
     self.hl = [] # highlight array
+    self.bg = [] # background array: (z, n, bound or unbound)
+
+    #############################################
+    # initialization
+    for i in range(self.n_hl):
+      self.bd_wid_hl.append(1)
+      self.bd_col_hl.append('#000000')
+      self.ft_siz_hl.append(0.4)
+      self.fl_name_hl.append(False)
+      self.bg_col_hl.append('#ffaaaa')
+      self.bg_alp_hl.append(1)
+      self.hl.append([])
+    #############################################
 
   def ConvText(self, val):
     s = '%.0e' % val
@@ -225,38 +245,73 @@ class nchart:
         self.cb.set_ticks([0,0.5,1],labels=['%3.1e' % x for x in [min, (min+max)/2, max]], fontsize=6)
         self.cb.set_label(labels[self.n_value-3], loc='left', fontsize=6)
 
-                      
+    for (z, n, b) in self.bg:
+      if z > self.z_max or z < self.z_min: continue
+      if n > self.n_max or n < self.n_min: continue
+      self.DrawBackground(n, z, b)   
+
     for (z, n), c, cs in zip(drawList, drawValue, drawStrValue):
       self.DrawRect(n, z, c, self.nu.GetName(z,n), cs)
 
-    for (z, n) in self.hl:
-      self.DrawHighlights(n, z, self.nu.GetName(z,n))   
+    for i in range(self.n_hl):
+      for (z, n) in self.hl[i]:
+        if z > self.z_max or z < self.z_min: continue
+        if n > self.n_max or n < self.n_min: continue   
+        self.DrawHighlights(n, z, self.nu.GetName(z,n), 
+                            self.bg_col_hl[i], self.bd_col_hl[i], self.bd_wid_hl[i], self.ft_siz_hl[i], self.fl_name_hl[i]) 
          
     if not self.flagExt:
       plt.show()
       #fig.savefig('output.eps', format='eps')  
       #self.fig.savefig('output.png', format='png')  
 
-  def LoadHighlights(self, file):
+  def LoadHighlights(self, file, hl_nucl: List):
     f = open(file)
     lines = f.readlines()
     f.close()
     
     for i in lines:
-      zn = self.nu.GetZN(i.strip())
-      if zn is not None:
-        self.hl.append((zn[0], zn[1]))
+      nucl = i.strip().split(',')
+      last_nucl = self.nu.GetZN(nucl[-1].strip())
+      if last_nucl is None: continue
+      for j in nucl:
+        j = j.strip()
+        if j.isdecimal():
+          hl_nucl.append((last_nucl[0], int(j) - last_nucl[0]))
+        else: 
+          zn = self.nu.GetZN(j)
+          if zn is not None: hl_nucl.append((zn[0], zn[1]))
     
-  def ClearHighlights(self): self.hl = []
+  def ClearHighlights(self, hl_nucl): hl_nucl = []
 
-  def DrawHighlights(self, x, y, t):
-    fcol = col.to_rgba(self.bg_col_hl)
+  def DrawHighlights(self, x, y, t, bg_col, bd_col, bd_width, ft_size, fl_name):
+    fcol = col.to_rgba(bg_col)
     tcol = 'w' if col.rgb_to_hsv(fcol[:3])[2] < 0.5 else 'k'
-    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=self.border_color_hl, lw=self.border_width_hl)
+    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=bd_col, lw=bd_width)
     self.ax.add_patch(rectangle)
-    if self.flag_name_hl:  
-      VectorText(self.ax, x, y, t, size=self.font_size_hl, tcol=tcol, w='heavy')
- 
+    if fl_name:  
+      VectorText(self.ax, x, y, t, size=ft_size, tcol=tcol, w='heavy')
+
+  def LoadBackground(self, file):
+    f = open(file)
+    lines = f.readlines()
+    f.close()
+    
+    for i in lines:
+      if i.startswith('#'): continue # comments
+      ispl = i.strip().split(',')
+      if ispl[2] == 'bound': 
+        self.bg.append((int(ispl[0]), int(ispl[1]), 1))        
+      #else:                  bound = 0
+      #self.bg.append((int(ispl[0]), int(ispl[1]), bound))
+    
+  def ClearBackground(self): self.bg = []
+
+  def DrawBackground(self, x, y, b):
+    fcol = col.to_rgba(self.bg1_col_bg if b == 1 else self.bg2_col_bg)
+    rectangle = patches.Rectangle((x-0.5,y-0.5), 1, 1, fc=fcol, ec=self.border_color_bg, lw=self.border_width_bg)
+    self.ax.add_patch(rectangle)
+
 if __name__=="__main__":
   print("Run the test functions for nchart") 
   nc = nchart()
