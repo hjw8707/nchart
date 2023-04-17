@@ -154,7 +154,7 @@ class NuDB:
     # DecayChannelStable: conversion the decay channel to the stability 
     def DecayChannelStable(self, x): # return +1 (p-rich), 0: 
         return {'2n': -1, 'n': -1, 'B-': -1, 'SF': 1, 'IS': 0, 
-                'A': 1, 'B+': 1, 'EC': 1, 'p': 1, '2p':1, '3p':1}.get(x, -20)
+                'A': 1, 'B+': 1, 'EC': 1, 'p': 1, '2p': 1, '3p':1}.get(x, -20)
     ############################################################
 
     def GetName(self, z, n, sup = True):
@@ -237,7 +237,18 @@ class NuDB:
     
     
 if __name__=="__main__":
-  nu = NuDB()
-  z=nu.GetDecayChannels(2,4)
-  print(nu.GetStringTime(2,4))
-  
+    nu = NuDB()
+    z=nu.GetDecayChannels(2,4)
+    print(nu.GetStringTime(2,4))
+    magic_n = [ 2, 8, 20, 28, 50, 82, 126 ]
+    for z in magic_n:
+        for i in range(0,100):  
+            if nu.IsExist(i, z):
+                a0 = i
+                break
+        for i in range(200,0,-1):  
+            if nu.IsExist(i, z):
+                a1 = i
+                break
+        print(a0, a1)
+    

@@ -3,6 +3,7 @@ import matplotlib.patches as patches
 import matplotlib.cm as cm
 import matplotlib.colors as col
 import matplotlib.image as img
+import matplotlib.lines as lin
 from matplotlib.textpath import TextPath
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import LinearSegmentedColormap
@@ -11,17 +12,19 @@ import matplotlib.transforms as trans
 #mpl.rcParams['pdf.fonttype'] = 42
 import numpy as np
 from nudb import NuDB
+import re
+import time
 from typing import List
 
 col1 = ['#E725A6','#EA457C','#E39A82', '#75F075', '#333333', '#F0F075', '#75DBF0', '#35E9BC', '#759EF0', '#9475F0', '#B375F0'] 
 leg1 = [r'$2n$', r'$n$', r'$\beta -$', 'Fission', 'Stable', r'$\alpha$', r'$\beta +$', r'$e$-capture', r'$p$', r'$2p$', r'$3p$']
-col2 = ['#C6F2FB', '#333333','#FFAEC9']
-leg2 = [r'$n$-rich', 'Stable', r'$p$-rich']
+col2 = ['#C6F2FB', '#333333','#FFAEC9', '#EEEEEE']
+leg2 = [r'$n$-rich', 'Stable', r'$p$-rich', 'p-unstable']
 # returning 2n, n, B-, SF, IS, A, B+, EC, p, 2p, 3p
 cmap1 = LinearSegmentedColormap.from_list('my_cmap1', col1, N=11)
-cmap2 = LinearSegmentedColormap.from_list('my_cmap2', col2, N=3)
+cmap2 = LinearSegmentedColormap.from_list('my_cmap2', col2, N=4)
 scalarMap1 = cm.ScalarMappable(col.Normalize(vmin=-4.5, vmax=6.5), cmap=cmap1)
-scalarMap2 = cm.ScalarMappable(col.Normalize(vmin=-1.5, vmax=1.5), cmap=cmap2)
+scalarMap2 = cm.ScalarMappable(col.Normalize(vmin=-1.5, vmax=2.5), cmap=cmap2)
 scalarMap3 = cm.ScalarMappable(col.Normalize(vmin=0, vmax=1), cmap='viridis')
 scalarMap4 = cm.ScalarMappable(col.Normalize(vmin=0, vmax=1), cmap='binary')
 smaps = [scalarMap1, scalarMap2, scalarMap3, scalarMap3, scalarMap3, scalarMap3, scalarMap4]
@@ -36,7 +39,7 @@ def VectorText(ax, x, y, t, size, tcol, ha='center', va='center', rotation=None,
   elif ha == 'right': x_tr = -(x1-x0)
   else:               x_tr = 0
   if va == 'center':  y_tr = -(y1-y0)/2
-  elif va == 'right': y_tr = -(y1-y0)
+  elif va == 'bottom': y_tr = -(y1-y0)
   else:               y_tr = 0
   if rotation == 'vertical': rot = 90
   else: rot = 0
@@ -60,8 +63,15 @@ class nchart:
   flag_value = False
   flag_axis = True
   flag_logo = True
-  
+  flag_leg  = True
+  flag_magic = True
+
   bg_color = '#ffffff'
+
+  wid_mg = 1
+  ln_col_mg = 'r'
+  ft_col_mg = 'k'
+  txt_mg = 2
 
   n_hl = 4
   bd_wid_hl: List[float] = []
@@ -123,8 +133,8 @@ class nchart:
     return '%1dx10$^{%1d}$' % (d, c)
 
   def SetParameters(self):
-    self.x_min, self.x_max = self.n_min - 1, self.n_max + 1
-    self.y_min, self.y_max = self.z_min - 1, self.z_max + 1
+    self.x_min, self.x_max = self.n_min - 2, self.n_max + 2
+    self.y_min, self.y_max = self.z_min - 2, self.z_max + 2
     self.x_width = self.x_max - self.x_min
     self.y_width = self.y_max - self.y_min
 
@@ -162,6 +172,19 @@ class nchart:
     VectorText(self.ax, self.x_min + 4, self.y_min, 'Neutrons', size=0.3, tcol=fcol)
     VectorText(self.ax, self.x_min, self.y_min + 4, 'Protons', size=0.3, tcol=fcol, rotation='vertical')
   
+  def DrawMagicLine(self):
+    magic_n = [ 2, 8, 20, 28, 50, 82, 126 ]
+    range_z = [ (1,8), (3,20), (13,41), (20,54), (49,90), (96,138), (96,138)]
+    range_n = [ (1,6), (2,14), ( 8,28), (11,33), (26,50), (45, 73), (76,93) ]
+    lext = 2
+    for (z, rz, rn) in zip(magic_n, range_z, range_n):
+      if z <= self.z_max and z >= self.z_min:
+        self.ax.add_line(lin.Line2D([rz[0]-lext,rz[1]+lext], [z, z], linewidth=self.wid_mg, color=self.ln_col_mg))
+        VectorText(self.ax, rz[0]-lext-0.5, z, str(z), size=self.txt_mg, tcol=self.ft_col_mg, ha='right')
+      if z <= self.n_max and z >= self.n_min:
+        self.ax.add_line(lin.Line2D([z, z], [rn[0]-lext,rn[1]+lext], linewidth=self.wid_mg, color=self.ln_col_mg))
+        VectorText(self.ax, z, rn[0]-lext-0.5, str(z), size=self.txt_mg, tcol=self.ft_col_mg, va='bottom')
+
   def DrawLogo(self):
     self.ax_logo = self.fig.add_axes([0.94,0.94,0.05,0.05], aspect=1, anchor='NE')  
     self.ax_logo.axis(False)
@@ -197,13 +220,15 @@ class nchart:
     self.SetAxis()
     if self.flag_axis: self.DrawAxis()
     if self.flag_logo: self.DrawLogo()
-    if self.n_value < 2: self.DrawLegend()
-    elif self.n_value < 6: self.DrawColorBar()
+    if self.flag_leg:
+      if self.n_value < 2: self.DrawLegend()
+      elif self.n_value < 6: self.DrawColorBar()
     drawList = []
     drawValue = []
     drawStrValue = []
     fun_value = [self.nu.GetMajorDecayChannelNum, self.nu.GetStableOrNotNum, self.nu.GetLogTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp, self.Zero]
     fun_strvalue = [self.nu.GetMajorDecayChannel, self.nu.GetMajorDecayChannel, self.nu.GetStringTime, self.nu.GetBE, self.nu.GetSn, self.nu.GetSp, self.StrZero]
+    t_start = time.time()
     for z in range(self.z_min,self.z_max+1):
       for n in range(self.n_min,self.n_max+1):
         if self.nu.IsExist(z,n): # and (z,n) in mapData.keys(): 
@@ -229,7 +254,7 @@ class nchart:
           else:
             temp = '%3.1e' % temp
           drawStrValue.append(temp)
-                      
+    print('values append time: %f' % (time.time() - t_start))
     drawValue = np.array(drawValue)
     drawValue = np.where(drawValue == None, np.NaN, drawValue)
     
@@ -244,22 +269,31 @@ class nchart:
         labels = ['B.E. [keV/u]', 'Sn [keV]', 'Sp [keV]']
         self.cb.set_ticks([0,0.5,1],labels=['%3.1e' % x for x in [min, (min+max)/2, max]], fontsize=6)
         self.cb.set_label(labels[self.n_value-3], loc='left', fontsize=6)
-
+    
+    t_start = time.time()
     for (z, n, b) in self.bg:
       if z > self.z_max or z < self.z_min: continue
       if n > self.n_max or n < self.n_min: continue
       self.DrawBackground(n, z, b)   
+    print('drawing bg time: %f' % (time.time() - t_start))
 
+    t_start = time.time()
     for (z, n), c, cs in zip(drawList, drawValue, drawStrValue):
       self.DrawRect(n, z, c, self.nu.GetName(z,n), cs)
+    print('drawing rect time: %f' % (time.time() - t_start))
 
+    t_start = time.time()
     for i in range(self.n_hl):
       for (z, n) in self.hl[i]:
         if z > self.z_max or z < self.z_min: continue
         if n > self.n_max or n < self.n_min: continue   
         self.DrawHighlights(n, z, self.nu.GetName(z,n), 
                             self.bg_col_hl[i], self.bd_col_hl[i], self.bd_wid_hl[i], self.ft_siz_hl[i], self.fl_name_hl[i]) 
-         
+    print('drawing highlights time: %f' % (time.time() - t_start))
+
+    if self.flag_magic:
+      self.DrawMagicLine()
+
     if not self.flagExt:
       plt.show()
       #fig.savefig('output.eps', format='eps')  
@@ -270,18 +304,29 @@ class nchart:
     lines = f.readlines()
     f.close()
     
-    for i in lines:
-      nucl = i.strip().split(',')
-      last_nucl = self.nu.GetZN(nucl[-1].strip())
-      if last_nucl is None: continue
-      for j in nucl:
-        j = j.strip()
-        if j.isdecimal():
-          hl_nucl.append((last_nucl[0], int(j) - last_nucl[0]))
-        else: 
-          zn = self.nu.GetZN(j)
-          if zn is not None: hl_nucl.append((zn[0], zn[1]))
-    
+    for line in lines:
+      nucls = [x.strip() for x in line.strip().split(',')]
+      save_a: List[int] = []
+      for nucl in nucls:
+        reg_single = re.match('\d+[a-zA-Z]+', nucl)
+        reg_range  = re.match('(\d+)\-(\d+)([a-zA-Z]+)', nucl)
+        reg_sing_d = re.match('\d+', nucl)
+        reg_rang_d = re.match('(\d+)\-(\d+)', nucl)
+        if reg_single: # ex: 49Ca
+          zn = self.nu.GetZN(nucl)
+          if zn is not None:
+            for a in save_a:
+              hl_nucl.append((zn[0], a - zn[0]))
+            hl_nucl.append((zn[0], zn[1]))  
+        elif reg_range: # ex: 100-102Nb
+          for a in range(int(reg_range.group(1)),int(reg_range.group(2))+1):
+            zn = self.nu.GetZN(str(a)+reg_range.group(3))
+            if zn is not None: hl_nucl.append((zn[0], zn[1]))
+        elif reg_sing_d: save_a.append(int(nucl))
+        elif reg_rang_d:
+          for a in range(int(reg_range.group(1)),int(reg_range.group(2))+1):
+            save_a.append(a)
+
   def ClearHighlights(self, hl_nucl): hl_nucl = []
 
   def DrawHighlights(self, x, y, t, bg_col, bd_col, bd_width, ft_size, fl_name):
