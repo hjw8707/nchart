@@ -78,7 +78,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.magicFontColorPB.clicked.connect(lambda: self.showColorDialog(self.mg_ft_col, self.magicFontColorPB))        
         self.magicFontSizeSB = QtWidgets.QDoubleSpinBox(); self.magicFontSizeSB.setValue(2); self.magicFontSizeSB.setRange(0,10); self.magicFontSizeSB.setSingleStep(0.05)
 
-
+        self.hlFlagCB: List[QtWidgets.QCheckBox] = []
         self.hlfileLE: List[QtWidgets.QLineEdit] = []
         self.hlfilePB: List[QtWidgets.QPushButton] = []
         self.hlfileclPB: List[QtWidgets.QPushButton] = []
@@ -89,6 +89,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hlBGColorPB: List[QtWidgets.QPushButton] = []
         self.hlBGAlphaSB: List[QtWidgets.QDoubleSpinBox] = []
         for i in range(self.n_hl):
+            self.hlFlagCB.append(QtWidgets.QCheckBox('Highlights %d' % (i+1))); self.hlFlagCB[i].setChecked(True)
             self.hlfileLE.append(QtWidgets.QLineEdit()); self.hlfileLE[i].setModified(False); self.hlfileLE[i].setText(self.hl_flname[i])
             self.hlfilePB.append(QtWidgets.QPushButton('Load')); self.hlfilePB[i].clicked.connect(lambda state, x=i: self.showHLFileDialog(x))
             self.hlfileclPB.append(QtWidgets.QPushButton('Clear')); self.hlfileclPB[i].clicked.connect(lambda state, x=i: self.hlfileClear(x))
@@ -154,7 +155,7 @@ class MainWindow(QtWidgets.QMainWindow):
         hlLayouts: List[QtWidgets.QHBoxLayout] = []
         for i in range(self.n_hl):
             hlLayouts.append(QtWidgets.QHBoxLayout())
-            hlLayouts[i].addWidget(QtWidgets.QLabel("Highlights %d" % (i+1)))            
+            hlLayouts[i].addWidget(self.hlFlagCB[i])         
             hlLayouts[i].addWidget(self.hlfileLE[i])
             hlLayouts[i].addWidget(self.hlfilePB[i])
             hlLayouts[i].addWidget(self.hlfileclPB[i])
@@ -245,8 +246,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc.nc.txt_mg = self.magicFontSizeSB.value()
 
         for i in range(self.n_hl):
-            self.sc.nc.ClearHighlights(self.sc.nc.hl[i])  
-            if self.hl_flname[i]: self.sc.nc.LoadHighlights(self.hl_flname[i], self.sc.nc.hl[i])           
+            self.sc.nc.fl_hl[i] = self.hlFlagCB[i].isChecked()
+            self.sc.nc.ClearHighlights(self.sc.nc.hl[i])
+            if self.hl_flname[i]: 
+                self.sc.nc.LoadHighlights(self.hl_flname[i], self.sc.nc.hl[i])           
             self.sc.nc.fl_name_hl[i] = self.hlNameCB[i].isChecked()
             self.sc.nc.bd_wid_hl[i]  = self.hlBorderWidthSB[i].value()
             self.sc.nc.ft_siz_hl[i]  = self.hlFontSizeSB[i].value()
@@ -265,7 +268,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sc.nc.bg1_col_bg = self.bg_bg1_col.getRgbF()
         self.sc.nc.bg2_col_bg = self.bg_bg2_col.getRgbF()
 
-        
         self.sc.nc.DrawChart()
         self.sc.draw()
 

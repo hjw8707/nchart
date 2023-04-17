@@ -74,6 +74,7 @@ class nchart:
   txt_mg = 2
 
   n_hl = 4
+  fl_hl: List[bool] = []
   bd_wid_hl: List[float] = []
   bd_col_hl: List[str] = []
   ft_siz_hl: List[float] = []
@@ -117,6 +118,7 @@ class nchart:
     #############################################
     # initialization
     for i in range(self.n_hl):
+      self.fl_hl.append(True)      
       self.bd_wid_hl.append(1)
       self.bd_col_hl.append('#000000')
       self.ft_siz_hl.append(0.4)
@@ -284,6 +286,7 @@ class nchart:
 
     t_start = time.time()
     for i in range(self.n_hl):
+      if not self.fl_hl[i]: continue
       for (z, n) in self.hl[i]:
         if z > self.z_max or z < self.z_min: continue
         if n > self.n_max or n < self.n_min: continue   
@@ -305,20 +308,21 @@ class nchart:
     f.close()
     
     for line in lines:
-      nucls = [x.strip() for x in line.strip().split(',')]
+      nucls = [x.split('#')[0].strip() for x in line.strip().split(',')]
       save_a: List[int] = []
       for nucl in nucls:
-        reg_single = re.match('\d+[a-zA-Z]+', nucl)
-        reg_range  = re.match('(\d+)\-(\d+)([a-zA-Z]+)', nucl)
-        reg_sing_d = re.match('\d+', nucl)
-        reg_rang_d = re.match('(\d+)\-(\d+)', nucl)
+        reg_single = re.fullmatch('\d+[a-zA-Z]+', nucl)
+        reg_range  = re.fullmatch('(\d+)\-(\d+)([a-zA-Z]+)', nucl)
+        reg_sing_d = re.fullmatch('\d+', nucl)
+        reg_rang_d = re.fullmatch('(\d+)\-(\d+)', nucl)
+        reg_zna    = re.fullmatch('(\d+)\s+(\d+)\s+(\d+)', nucl)
         if reg_single: # ex: 49Ca
           zn = self.nu.GetZN(nucl)
           if zn is not None:
             for a in save_a:
               hl_nucl.append((zn[0], a - zn[0]))
             hl_nucl.append((zn[0], zn[1]))  
-        elif reg_range: # ex: 100-102Nb
+        elif reg_range: # ex: 100-102Nb   
           for a in range(int(reg_range.group(1)),int(reg_range.group(2))+1):
             zn = self.nu.GetZN(str(a)+reg_range.group(3))
             if zn is not None: hl_nucl.append((zn[0], zn[1]))
@@ -326,8 +330,11 @@ class nchart:
         elif reg_rang_d:
           for a in range(int(reg_range.group(1)),int(reg_range.group(2))+1):
             save_a.append(a)
+        elif reg_zna:
+          hl_nucl.append((int(reg_zna.group(1)), int(reg_zna.group(2))))
 
-  def ClearHighlights(self, hl_nucl): hl_nucl = []
+  def ClearHighlights(self, hl_nucl: List): 
+    hl_nucl.clear()
 
   def DrawHighlights(self, x, y, t, bg_col, bd_col, bd_width, ft_size, fl_name):
     fcol = col.to_rgba(bg_col)
